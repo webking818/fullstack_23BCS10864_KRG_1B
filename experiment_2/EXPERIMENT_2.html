@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Quiz Challenge</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      background: linear-gradient(45deg, #ff6b6b, #4ecdc4, #45b7d1, #f7b733);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      font-family: 'Poppins', sans-serif;
+    }
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+    .floating-bubbles {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+      overflow: hidden;
+      z-index: 0;
+    }
+    .bubble {
+      position: absolute;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.3);
+      animation: bubbleFloat 10s ease-in-out infinite;
+    }
+    @keyframes bubbleFloat {
+      0%, 100% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+      50% { opacity: 1; }
+      100% { transform: translateY(-100vh) rotate(360deg); }
+    }
+    .bubble:nth-child(odd) {
+      left: 10%;
+      width: 40px;
+      height: 40px;
+      animation-delay: -2s;
+      animation-duration: 8s;
+    }
+    .bubble:nth-child(even) {
+      right: 10%;
+      width: 60px;
+      height: 60px;
+      animation-delay: -4s;
+      animation-duration: 12s;
+    }
+    .quiz-box {
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      animation: fadeSlideIn 0.5s ease-out;
+    }
+    @keyframes fadeSlideIn {
+      from { opacity: 0; transform: translateX(-50px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    .custom-input {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      border: 2px solid transparent;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+    .custom-input:focus {
+      border-color: #4ecdc4;
+      box-shadow: 0 0 0 3px rgba(78, 205, 196, 0.3);
+    }
+    .custom-btn {
+      background: linear-gradient(145deg, #4ecdc4, #44a08d);
+      border: none;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .custom-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+    }
+    .option-card {
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 12px;
+      transition: background 0.3s, border-color 0.3s, transform 0.2s;
+      cursor: pointer;
+    }
+    .option-card:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #ff6b6b;
+      transform: scale(1.05);
+    }
+    .option-card.selected {
+      background: #ff6b6b;
+      border-color: #ff5252;
+      color: white;
+      transform: scale(1.05);
+    }
+    .timer-circle {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: conic-gradient(#ff6b6b 0% ${100 - (timeLeft / 20 * 100)}%, #eee ${100 - (timeLeft / 20 * 100)}% 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: white;
+      margin: 0 auto 1rem;
+    }
+    .sparkle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background: radial-gradient(circle, #ffd700, transparent);
+      border-radius: 50%;
+      animation: sparkleFade 2s linear infinite;
+      pointer-events: none;
+      z-index: 5;
+    }
+    @keyframes sparkleFade {
+      0%, 100% { opacity: 1; transform: scale(0.5) rotate(0deg); }
+      50% { opacity: 0.7; transform: scale(1.5) rotate(180deg); }
+    }
+    .report-card {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 15px;
+      padding: 1rem;
+      margin-bottom: 0.5rem;
+      backdrop-filter: blur(5px);
+    }
+    .correct-bg {
+      background: linear-gradient(145deg, #4caf50, #388e3c);
+    }
+    .incorrect-bg {
+      background: linear-gradient(145deg, #f44336, #d32f2f);
+    }
+  </style>
+</head>
+<body class="h-screen flex items-center justify-center relative overflow-hidden">
+  <div class="floating-bubbles">
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+    <div class="bubble"></div>
+  </div>
+
+  <div class="quiz-box w-full max-w-lg bg-white/20 rounded-3xl p-8 shadow-2xl relative z-10">
+
+    <!-- Welcome Screen -->
+    <div id="welcome-screen" class="screen flex flex-col items-center justify-center">
+      <h1 class="text-4xl font-bold text-white mb-6 drop-shadow-lg">🎉 Quiz Challenge 🎉</h1>
+      <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3adb9747-4997-4775-973b-96efd321030d.png" alt="Dynamic quiz start screen with vibrant colors and a brainy mascot holding a trophy in a futuristic setting with floating question marks and sparkles" class="w-24 h-24 rounded-full mb-6 shadow-lg">
+      <input type="text" id="name-input" placeholder="Enter your name" class="custom-input w-full p-3 rounded-xl text-lg mb-4" maxlength="30">
+      <button id="start-quiz-btn" class="custom-btn text-white py-3 px-8 rounded-xl text-xl font-semibold">Launch Quiz</button>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quiz-screen" class="screen hidden flex-col items-center justify-center">
+      <h1 class="text-3xl font-bold text-white mb-4 drop-shadow-lg">Question</h1>
+      <div id="timer-display" class="timer-circle text-xl"></div>
+      <div id="question-text" class="bg-white/20 p-6 rounded-xl text-lg text-white text-center mb-6 w-full shadow-inner">Loading...</div>
+      <div id="options-container" class="w-full grid grid-cols-1 gap-4 mb-6"></div>
+      <button id="submit-answer-btn" class="custom-btn text-white py-2 px-6 rounded-xl text-lg disabled:opacity-50 disabled:cursor-not-allowed" disabled>Submit Answer</button>
+    </div>
+
+    <!-- Result Screen -->
+    <div id="result-screen" class="screen hidden flex-col items-center justify-center">
+      <h1 class="text-3xl font-bold text-white mb-6 drop-shadow-lg">Quiz Complete!</h1>
+      <div id="final-score" class="bg-white/20 p-8 rounded-2xl text-2xl text-white text-center mb-6 w-full shadow-xl">Calculating...</div>
+      <button id="view-report-btn" class="custom-btn text-white py-3 px-8 rounded-xl text-xl font-semibold">View Report</button>
+    </div>
+
+    <!-- Detailed Report Screen -->
+    <div id="report-screen" class="screen hidden">
+      <h1 class="text-3xl font-bold text-white mb-6 text-center drop-shadow-lg">Detailed Report</h1>
+      <div id="report-details" class="max-h-96 overflow-y-auto w-full space-y-4 mb-6"></div>
+      <button id="play-again-btn" class="custom-btn text-white py-3 px-8 rounded-xl text-xl font-semibold self-center">Play Again</button>
+    </div>
+
+  </div>
+
+  <script>
+    const questions = [
+      { question: "What is the square root of 144?", options: ["12", "14", "16", "18"], answer: 0 },
+      { question: "Which gas is most abundant in Earth's atmosphere?", options: ["Oxygen", "Carbon Dioxide", "Nitrogen", "Argon"], answer: 2 },
+      { question: "Who painted the Mona Lisa?", options: ["Vincent van Gogh", "Pablo Picasso", "Leonardo da Vinci", "Michelangelo"], answer: 2 },
+      { question: "What is the capital of Brazil?", options: ["São Paulo", "Rio de Janeiro", "Brasília", "Salvador"], answer: 2 },
+      { question: "Which planet has the most moons?", options: ["Saturn", "Jupiter", "Neptune", "Uranus"], answer: 1 }
+    ];
+
+    let currentQuestionIndex = 0;
+    let userScore = 0;
+    let userName = '';
+    let userAnswers = [];
+    let timerInterval;
+    let timeLeft = 20;
+    let selectedOption = null;
+
+    // Screens
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const quizScreen = document.getElementById('quiz-screen');
+    const resultScreen = document.getElementById('result-screen');
+    const reportScreen = document.getElementById('report-screen');
+
+    // Elements
+    const nameInput = document.getElementById('name-input');
+    const startQuizBtn = document.getElementById('start-quiz-btn');
+    const timerDisplay = document.getElementById('timer-display');
+    const questionText = document.getElementById('question-text');
+    const optionsContainer = document.getElementById('options-container');
+    const submitBtn = document.getElementById('submit-answer-btn');
+    const finalScore = document.getElementById('final-score');
+    const viewReportBtn = document.getElementById('view-report-btn');
+    const reportDetails = document.getElementById('report-details');
+    const playAgainBtn = document.getElementById('play-again-btn');
+
+    function showScreen(screen) {
+      [welcomeScreen, quizScreen, resultScreen, reportScreen].forEach(s => s.classList.add('hidden'));
+      screen.classList.remove('hidden');
+    }
+
+    startQuizBtn.addEventListener('click', () => {
+      if (nameInput.value.trim()) {
+        userName = nameInput.value.trim();
+        showScreen(quizScreen);
+        loadQuestion();
+        startTimer();
+      }
+    });
+
+    function loadQuestion() {
+      const currentQ = questions[currentQuestionIndex];
+      questionText.textContent = currentQ.question;
+      optionsContainer.innerHTML = '';
+      selectedOption = null;
+      submitBtn.disabled = true;
+
+      currentQ.options.forEach((option, index) => {
+        const optionCard = document.createElement('div');
+        optionCard.className = 'option-card p-4 text-center cursor-pointer';
+        optionCard.textContent = option;
+        optionCard.addEventListener('click', () => selectOption(optionCard, index));
+        optionsContainer.appendChild(optionCard);
+      });
+    }
+
+    function selectOption(card, index) {
+      optionsContainer.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      selectedOption = index;
+      submitBtn.disabled = false;
+    }
+
+    submitBtn.addEventListener('click', () => {
+      if (selectedOption !== null) {
+        submitAnswer();
+        if (currentQuestionIndex < questions.length - 1) {
+          currentQuestionIndex++;
+          loadQuestion();
+          resetTimer();
+        } else {
+          endQuiz();
+        }
+      }
+    });
+
+    function submitAnswer() {
+      const isCorrect = selectedOption === questions[currentQuestionIndex].answer;
+      if (isCorrect) userScore++;
+      userAnswers.push({
+        question: questions[currentQuestionIndex].question,
+        userAnswer: questions[currentQuestionIndex].options[selectedOption],
+        correctAnswer: questions[currentQuestionIndex].options[questions[currentQuestionIndex].answer],
+        correct: isCorrect
+      });
+    }
+
+    function startTimer() {
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        updateTimerDisplay();
+        if (timeLeft <= 0) {
+          timeOut();
+        }
+      }, 1000);
+    }
+
+    function updateTimerDisplay() {
+      timerDisplay.textContent = timeLeft;
+      const percentage = ((20 - timeLeft) / 20) * 100;
+      timerDisplay.style.background = `conic-gradient(#ff6b6b 0% ${percentage}%, #eee ${percentage}% 100%)`;
+      if (timeLeft <= 5) timerDisplay.classList.add('animate-pulse');
+    }
+
+    function timeOut() {
+      clearInterval(timerInterval);
+      userAnswers.push({
+        question: questions[currentQuestionIndex].question,
+        userAnswer: 'Timed out',
+        correctAnswer: questions[currentQuestionIndex].options[questions[currentQuestionIndex].answer],
+        correct: false
+      });
+      if (currentQuestionIndex < questions.length - 1) {
+        currentQuestionIndex++;
+        loadQuestion();
+        resetTimer();
+      } else {
+        endQuiz();
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timerInterval);
+      timeLeft = 20;
+      updateTimerDisplay();
+      timerDisplay.classList.remove('animate-pulse');
+      startTimer();
+    }
+
+    function endQuiz() {
+      clearInterval(timerInterval);
+      showScreen(resultScreen);
+      finalScore.textContent = `${userName}, your score: ${userScore}/${questions.length}`;
+      addSparkles();
+    }
+
+    function addSparkles() {
+      for (let i = 0; i < 30; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.className = 'sparkle';
+        sparkle.style.left = Math.random() * 100 + '%';
+        sparkle.style.top = Math.random() * 100 + '%';
+        sparkle.style.animationDelay = Math.random() * 2 + 's';
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 2000);
+      }
+    }
+
+    viewReportBtn.addEventListener('click', () => {
+      showScreen(reportScreen);
+      reportDetails.innerHTML = '';
+
+      let correctCount = 0;
+      let timedOutCount = 0;
+      userAnswers.forEach((ans, index) => {
+        if (ans.correct) correctCount++;
+        if (ans.userAnswer === 'Timed out') timedOutCount++;
+        const card = document.createElement('div');
+        card.className = 'report-card';
+        card.innerHTML = `
+          <p class="font-semibold mb-2">Q${index + 1}: ${ans.question}</p>
+          <p>Your answer: <span class="${ans.correct ? 'text-green-300' : 'text-red-300'}">${ans.userAnswer}</span></p>
+          <p>Correct answer: <span class="text-blue-300">${ans.correctAnswer}</span></p>
+          <p class="font-medium ${ans.correct ? 'text-green-400' : 'text-red-400'}">${ans.correct ? '✓ Correct' : '✗ Wrong'}</p>
+        `;
+        if (!ans.correct) {
+          card.classList.add('incorrect-bg');
+        } else {
+          card.classList.add('correct-bg');
+        }
+        reportDetails.appendChild(card);
+      });
+
+      // Add summary
+      const summary = document.createElement('div');
+      summary.className = 'report-card bg-gradient-to-r from-blue-500 to-purple-500 text-white';
+      summary.innerHTML = `
+        <h3 class="text-lg font-bold mb-2">Summary</h3>
+        <p>Player: ${userName}</p>
+        <p>Final Score: ${userScore}/${questions.length}</p>
+        <p>Correct Answers: ${correctCount}</p>
+        <p>Timed Out: ${timedOutCount}</p>
+        <p>Percentage: ${Math.round(userScore / questions.length * 100)}%</p>
+      `;
+      reportDetails.insertBefore(summary, reportDetails.firstChild);
+    });
+
+    playAgainBtn.addEventListener('click', () => {
+      currentQuestionIndex = 0;
+      userScore = 0;
+      userAnswers = [];
+      userName = '';
+      timeLeft = 20;
+      selectedOption = null;
+      nameInput.value = '';
+      showScreen(welcomeScreen);
+    });
+  </script>
+</body>
+</html>
+</content>
+</create_file>
